@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Asgard Platformer</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+</head>
+<body>
+<script>
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 450,
+    physics: {
+        default: 'arcade',
+        arcade: { gravity: { y: 600 } }
+    },
+    scene: { preload, create, update }
+};
+
+let player, cursors, enemies, powerups, slomoActive=false, slomoTimer=0, score=0, scoreText;
+
+function preload() {
+    this.load.image('background', 'https://kenney.nl/assets/platformer-art-deluxe/background.png'); // Or your own
+    this.load.image('ground', 'https://kenney.nl/assets/platformer-art-deluxe/ground_grass.png');
+    this.load.spritesheet('hero', 'https://kenney.nl/assets/platformer-art-deluxe/player_idle.png', {
+      frameWidth: 72, frameHeight: 97
+    });
+    this.load.spritesheet('enemy', 'https://kenney.nl/assets/platformer-art-deluxe/enemy_idle.png', {
+      frameWidth: 72, frameHeight: 97
+    });
+    this.load.image('powerup', 'https://kenney.nl/assets/platformer-art-deluxe/star.png');
+}
+
+function create() {
+    // Background
+    this.add.image(400, 225, 'background').setScale(2);
+
+    // Platforms
+    const platforms = this.physics.add.staticGroup();
+    platforms.create(400, 430, 'ground').setScale(2).refreshBody();
+
+    // Player
+    player = this.physics.add.sprite(100, 320, 'hero');
+    player.setCollideWorldBounds(true);
+
+    // Enemies
+    enemies = this.physics.add.group();
+    spawnEnemy(this);
+
+    // Powerups
+    powerups = this.physics.add.group();
+    spawnPowerup(this);
+
+    // Controls
+    cursors = this.input.keyboard.createCursorKeys();
+
+    // Colliders
+    this.physics.add.collider(player, platforms);
+    this.physics.add.collider(enemies, platforms);
+    this.physics.add.overlap(player, enemies, hitEnemy, null, this);
+    this.physics.add.overlap(player, powerups, collectPowerup, null, this);
+
+    // Score
+    scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '24px', fill: '#fff' });
+}
+
+function update(time, delta) {
+    if (!player.active) return;
+    if (cursors.left.isDown) { player.setVelocityX(-200); }
+    else if (cursors.right.isDown) { player.setVelocityX(200); }
+    else { player.setVelocityX(0); }
+
+    if (cursors.up.isDown && player.body.touching.down) {
+        player.setVelocityY(-410);
+    }
+
+    // Slomo powerup
+    if (slomoActive) {
+        this.physics.world.timeScale = 0.5;
+        slomoTimer -= delta;
+        if (slomoTimer <= 0) {
+            slomoActive = false;
+            this.physics.world.timeScale = 1.0;
+        }
+    }
+
+    // Enemy AI
+    Phaser.Actions.Call(enemies.getChildren(), function(enemy) {
+        if (enemy.x < 0 || enemy.x > 800) enemy.setVelocityX(-enemy.body.velocity.x);
+    }, this);
+}
+
+// Helper functions
+function spawnEnemy(scene) {
+    const enemy = enemies.create(750, 320, 'enemy');
+    enemy.setBounce(1);
+    enemy.setCollideWorldBounds(true);
+    enemy.setVelocityX(-100);
+}
+
+function spawnPowerup(scene) {
+    const x = Phaser.Math.Between(150, 700);
+    const powerup = powerups.create(x, 300, 'powerup');
+}
+
+function hitEnemy(player, enemy) {
+    if (player.body.velocity.y > 0) {
+        enemy.destroy();
+        score += 10;
+        scoreText.setText('Score: ' + score);
+        spawnEnemy(this.scene);
+    } else {
+        // Game over
+        player.setTint(0xff0000);
+        player.setVelocity(0, 0);
+        player.anims.stop();
+        player.active = false;
+        scoreText.setText('Game Over! Score: ' + score);
+    }
+}
+
+function collectPowerup(player, powerup) {
+    powerup.destroy();
+    slomoActive = true;
+    slomoTimer = 3000; // 3 seconds
+}
+
+new Phaser.Game(config);
+</script>
+</body>
+</html>
