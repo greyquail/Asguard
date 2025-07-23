@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Asgard Platformer – All Assets Embedded</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { margin: 0; background: #161c22;}
+    canvas { display: block; margin: 0 auto; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+</head>
+<body>
+<script>
+// Base64 PNGs for all assets (character, enemy, powerup, ground, background)
+// Generated as simple pixel art for demonstration
+const EMBED = {
+  hero: 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAABhCAYAAABb/P7GAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAA40lEQVR4nO3QsQ3DIBAEQfP+/99RL2AruqCpiVKjgiB8n/QeaYdlh8Y+S3hGJyVfAfDFdpH5YTXg/iFvHzh7QfR0SGK7QXQIVw9+mMFtDk5+XvDyKsjjxjhLEQywhZdKsx4KKJurgXwQYIVu3+tQTIyxDkBjBamCoUlsIQ+xnbVJlUr+FKYo9wmyTTrE+onw/Kpg9g7LydyFIWhAU9pG3HiE/Yb5/PSSQJD0Vk4DhJNIpk3pM9nGkZliZXAAAAAElFTkSuQmCC',
+  enemy: 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAABhCAYAAABb/P7GAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAnElEQVR4nO3YQQ3AIBBFUbH7/z9VG9UnztPd0w9tK4ylQnMCCG4mrB4TbB0EB+ESozP/djRKX6w8PWmiwP80RhA1hGWgqvA9ymaoP0glZJTWxT7HF1jL/19Bl3zhuX/iIcknZMnNdBAVxjDFEZXSMIk/RAMT2U15RhoqA4KYo0AgmjAz3VKAr1fYb1eW5dRiPdYyAEAAAAASUVORK5CYII=',
+  powerup: 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAABYCAYAAAA9BBrwAAAACXBIWXMAAAsTAAALEwEAmpwYAAABCUlEQVR4nO2VMUoDQRRFv48AWQTQBJkEkAUQCSxxjQEwcJJgAJoExAS2jKQp5UHE4TtfPj/4wuZ05p4Ec/WAWtYBsVwgyXMwBvIgR4AaImfEutMFrAjBb7QywV9FS+BQ7Xk78DXEe0FOBVWAtrQVuVvtLGrXwAVMfKwCsikCGE61J55gvdYP5zAlwe5RtE2w+G7GnlwA5Y9ZaQlTNd8d8LkY4kJKOeD8OOQggQIuExslPQRC2GLPQm1muXG8Aeuw1wxe7DbZVwMAAAAASUVORK5CYII=',
+  ground: 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABbCAYAAABwILNqAAAACXBIWXMAAAsSAAALEgHS3X78AAABAUlEQVR4nO3UQQrAIAwEwR7P1f2fb0EkChPVhVBdtst/H9BrAI5lDIaxDDnQocSWUQrbSR/VO3SbI+u0GL7Zp6oiVzAzYX+FAgFSoBVSgBVYgFWIApWgCUoAFagBVoAVSgBVYgFWgBVqAFUoAVWoAVSgBVYgFWgBVqAFUoAVWoAVSgBVYoDfJTHcbk4br2PkkAAVSgBVYoZfLAoVZA3x4XwARygBVYoAWX4M25BCw9y4AK4DwHV4QEGZX0DEAAAAASUVORK5CYII=',
+  bg: 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAABQAAAAGQCAYAAADjF1toAAAACXBIWXMAABYlAAAWJQFJUiTwAAAJ6klEQVR4nO3QwQ3DMAwFUel+/3uyMEyF2aijINTMs5f4/r3fDnDBDDDDHc7lmG/jfJMem9AVrfQKrtfSRKkzQJJ1D4S/H5s22Ev12VCzHDAHJCw1DWfAw37CAQcKI1QpGSl6cBFkiBgiGBChAgTpBkGQMoA2gd+p+MNoEwQoCIEaABFgApLQCghGgARUQBGABJKAEVETREoIESKACoIEIEKECBOkGQZAyf4nq8yMIr76XzZm/MLoZCOE9L59C1lSwOrwlIuoFIKMvKHfsgk8UwmVEY2TAYFAhqxCC3AQQyoHBBAYv9CUgqAIbUPoJQgoAhpQ+glCCCgCGlD6CUIKAIaUPoJQgoAhpQ+glCCCgCGlD6CU9wGfUJ1gBRm/tnOQAAAABJRU5ErkJggg=='
+};
+
+const config = {
+  type: Phaser.AUTO,
+  width: 900,
+  height: 500,
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  physics: {
+    default: 'arcade',
+    arcade: { gravity: { y: 900 }, debug: false }
+  },
+  scene: { preload, create, update }
+};
+
+let player, cursors, enemies, powerups, bg, score = 0, scoreText, slomo = false, slomoTimer = 0;
+let lastEnemyTime = 0;
+
+function preload() {
+  this.load.image('background', EMBED.bg);
+  this.load.image('ground', EMBED.ground);
+  this.load.spritesheet('hero', EMBED.hero, { frameWidth: 74, frameHeight: 97 });
+  this.load.spritesheet('enemy', EMBED.enemy, { frameWidth: 74, frameHeight: 97 });
+  this.load.image('powerup', EMBED.powerup);
+}
+
+function create() {
+  bg = this.add.tileSprite(450, 250, 900, 500, 'background').setScrollFactor(0);
+
+  const platforms = this.physics.add.staticGroup();
+  platforms.create(450, 490, 'ground').setScale(2).refreshBody();
+
+  player = this.physics.add.sprite(120, 380, 'hero').setScale(1.1);
+  player.setCollideWorldBounds(true);
+
+  enemies = this.physics.add.group();
+  spawnEnemy(this);
+
+  powerups = this.physics.add.group();
+  spawnPowerup(this);
+
+  cursors = this.input.keyboard.createCursorKeys();
+
+  this.physics.add.collider(player, platforms);
+  this.physics.add.collider(enemies, platforms);
+  this.physics.add.overlap(player, enemies, hitEnemy, null, this);
+  this.physics.add.overlap(player, powerups, collectPowerup, null, this);
+
+  scoreText = this.add.text(40, 20, 'Score: 0', { fontSize: '28px', fill: '#e6e658', fontFamily: 'monospace' });
+
+  this.input.on('pointerdown', function(pointer) {
+    if (pointer.y > 400) {
+      if (player.body.touching.down) player.setVelocityY(-550);
+    } else if (pointer.x > 450) { player.setVelocityX(250); }
+    else { player.setVelocityX(-250); }
+  });
+  this.input.on('pointerup', function() { player.setVelocityX(0); });
+}
+
+function update(time, delta) {
+  bg.tilePositionX += 0.5;
+
+  if (player.active) {
+    if (cursors.left.isDown) { player.setVelocityX(-250); }
+    else if (cursors.right.isDown) { player.setVelocityX(250); }
+    else { player.setVelocityX(0); }
+
+    if (cursors.up.isDown && player.body.touching.down) player.setVelocityY(-550);
+
+    if (slomo) {
+      this.physics.world.timeScale = 0.4;
+      slomoTimer -= delta;
+      if (slomoTimer <= 0) {
+        this.physics.world.timeScale = 1;
+        slomo = false;
+      }
+    }
+
+    if (time - lastEnemyTime > 4000) {
+      spawnEnemy(this);
+      lastEnemyTime = time;
+    }
+
+    enemies.children.iterate(function(enemy) {
+      if (enemy.x < 0 || enemy.x > 880) enemy.setVelocityX(-enemy.body.velocity.x);
+    });
+  }
+}
+
+function spawnEnemy(scene) {
+  const enemy = enemies.create(820, 380, 'enemy').setScale(1.1);
+  enemy.setBounce(1); enemy.setCollideWorldBounds(true);
+  enemy.setVelocityX(-140 - Math.random()*70);
+
+  scene.time.addEvent({ delay: Phaser.Math.Between(1500, 3000), callback: () => {
+    if (enemy.body && enemy.body.touching.down) enemy.setVelocityY(-340);
+  } });
+}
+
+function spawnPowerup(scene) {
+  const x = Phaser.Math.Between(160, 720);
+  powerups.create(x, 320, 'powerup').setScale(1.2);
+}
+
+function hitEnemy(player, enemy) {
+  if (player.body.velocity.y > 0) {
+    enemy.destroy();
+    score += 15;
+    scoreText.setText('Score: ' + score);
+    spawnEnemy(this.scene);
+  } else {
+    player.setTint(0xff1111);
+    player.setVelocity(0, 0);
+    player.active = false;
+    scoreText.setText('Game Over! Score: ' + score);
+  }
+}
+
+function collectPowerup(player, powerup) {
+  powerup.destroy();
+  slomo = true;
+  slomoTimer = 2800;
+  score += 20;
+  scoreText.setText('Score: ' + score);
+}
+
+new Phaser.Game(config);
+</script>
+</body>
+</html>
